@@ -1,0 +1,28 @@
+// message system
+
+enum HEADER {
+    HEARTBEAT, // id
+    HEADERSIZE
+};
+
+class Message {
+public:
+    HEADER header;
+    char* content;
+};
+
+Message decode(char* buf);
+void encodeHeartBeat(int id, char* buf) {
+    char temp[BUFFER_SIZE];
+    HEADER header = HEARTBEAT;
+    memcpy(buf, &header, sizeof(HEADER));
+    memcpy(buf+sizeof(HEADER), &id, sizeof(id));
+    decode(buf);
+}
+
+Message decode(char* buf) {
+    Message msg;
+    msg.header = *(HEADER*)buf;
+    msg.content = buf + sizeof(HEADER);
+    return msg;
+}
