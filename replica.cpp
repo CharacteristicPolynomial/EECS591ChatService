@@ -12,7 +12,7 @@
 #include <thread>
 #include <chrono>
 #define SOCKADDR_LENGTH sizeof(struct sockaddr_in)
-#define RECV_TIME_OUT 500 // in milliseconds
+#define RECV_TIME_OUT 2000 // in milliseconds
 #define HEART_BEAT 1000 // in milliseconds
 #define BUFFER_SIZE 1024
 using namespace std;
@@ -36,6 +36,7 @@ public:
             temp.sin_family = AF_INET;
             inet_pton(AF_INET, ip.c_str(), &temp.sin_addr);
             temp.sin_port = htons(port);
+            cout << port << endl;
             addrs.push_back(temp);
         }
         ifs.close();
@@ -44,9 +45,10 @@ public:
         memcpy(&addr, sockAddr, SOCKADDR_LENGTH);
         fd = fd_;
     }
-    void broadcast(const char* msg) { // ensures that msg is a cstring
+    void broadcast(const char* msg, int msglen) { // ensures that msg is a cstring
         for(auto it=addrs.begin(); it!=addrs.end(); it++) {
-            if (sendto(fd, msg, strlen(msg), 0, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            struct sockaddr_in temp = *it;
+            if (sendto(fd, msg, msglen, 0, (struct sockaddr*) &temp, sizeof(temp)) < 0) {
                 cout << "sendto failed: " << strerror(errno) << endl;
                 exit(-1);
             }
@@ -63,79 +65,12 @@ private:
     vector<struct sockaddr_in> addrs;
 };
 
-class Request {
-public:
-    struct sockaddr_in clientAddr;
-    string request;
-    int requestID; // given by the client
-};
-
-#include "rolePlay.seg"
 #include "messages.seg"
-class Replica { // used for role play (leader/proposer, acceptor, learner)
-public:
-    Replica(int f_, int id_, int fd_, const struct sockaddr_in *addr, Speaker* sp) {
-        f = f_;
-        id = id_;
-        fd = fd_;
-        speaker = sp;
-        memcpy(&myaddr, addr, SOCKADDR_LENGTH);
-        view = 0;
-    }
-    void run() {
-        thread hp(&Replica::heartBeat, this); // create heart beat thread
-        char buffer[BUFFER_SIZE];
-        while(1) {
-            int dgramsize;
-            dgramsize = recvfrom(fd, buffer, BUFFER_SIZE, 0, 0, 0);
-            if(dgramsize == -1) {
-                // recv error
-                if(errno == 11) {
-                    // time out 
-                    time_out();
-                } else {
-                    // error
-                    cerr << "Error: socket recvfrom() error." << endl;
-                    exit(-1);
-                }
-            } else {
-                // received a datagram
-                parsemsg(buffer, dgramsize);
-            }
-        }
-    }
-private:
-    int f, id, fd;
-    int view;
-    struct sockaddr_in myaddr;
-    Speaker* speaker;
+#include "rolePlay.seg"
 
-    Leader leader;
-    Acceptor acceptor;
-    Learner learner;
-
-    vector<Request> chatLog;
-
-    void time_out() {
-
-    }
-    void parsemsg(char* buf, int buflen) {
-
-    }
-    void heartBeat() {
-        int k = 0;
-        char heartBuf[BUFFER_SIZE];
-        while(1) {
-            this_thread::sleep_for(chrono::milliseconds(HEART_BEAT));
-            encodeHeartBeat(id, heartBuf);
-            speaker->broadcast(heartBuf);
-        }
-    }
-};
-
-int main(int argc, const char * argv[]) { // f, id, myaddr, myport, addrFile
+int main(int argc, const char * argv[]) { // f, id, myaddr, myport, addrFile, logFile
     // parse input
-    if(argc < 6) {
+    if(argc < 7) {
         cerr << "Error: Missing arguments. (f, id, myaddr, myport, addrFile)" << endl;
         return -1;
     }
@@ -171,7 +106,7 @@ int main(int argc, const char * argv[]) { // f, id, myaddr, myport, addrFile
     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         perror("Error: cannot set time out");
     }
-    Replica rep(f, id, fd, &myaddr, myspeaker);
+    Replica rep(f, id, fd, &myaddr, myspeaker, argv[6]);
     rep.run(); // enters working loop
     
     return 0;

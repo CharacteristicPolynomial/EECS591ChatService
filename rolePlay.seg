@@ -1,11 +1,127 @@
-class Leader {
 
-};
+#include <utility> 
+#include <unordered_map>
 
-class Acceptor {
+class Replica { // used for role play (leader/proposer, acceptor, learner)
+public:
+    Replica(int f_, int id_, int fd_, const struct sockaddr_in *addr, Speaker* sp, const char* logfile_) {
+        f = f_;
+        id = id_;
+        fd = fd_;
+        speaker = sp;
+        memcpy(&myaddr, addr, SOCKADDR_LENGTH);
+        view = 2*f + 1;
+        logfile = logfile_;
+        patience = 0;
+        heartBeatList = vector<chrono::nanoseconds>(2*f + 1);
+        viewchange_data =  vector<TempLog> (2*f + 1);
+        parselog();
+    }
+    void run() {
+        thread hp(&Replica::heartBeat, this); // create heart beat thread
+        char buffer[BUFFER_SIZE];
+        struct sockaddr_in senderAddr;
+        socklen_t addrLen = SOCKADDR_LENGTH;
+        while(1) {
+            int dgramsize;
+            dgramsize = recvfrom(fd, buffer, BUFFER_SIZE, 0, (struct sockaddr*)&senderAddr, &addrLen);
+            if(dgramsize == -1) {
+                // recv error
+                if(errno == 11) {
+                    // time out 
+                    time_out();
+                } else {
+                    // error
+                    cerr << "Error: socket recvfrom() error." << endl;
+                    exit(-1);
+                }
+            } else {
+                // received a datagram
+                parsemsg(buffer, dgramsize, senderAddr);
+            }
+        }
+    }
+private:
+    int f, id, fd;
+    int view;
+    struct sockaddr_in myaddr;
+    Speaker* speaker;
+    const char* logfile;
 
-};
+    vector<Request> chatLog; // learned Log
+    // a hole in chatLog is indicated by the holeQ member
+    vector<pair<Request, int>> acceptLog; // accepted log (request, view_number)
+    // a hole in acceptLog is indicated by the view number (and the holeQ member)
+    vector<chrono::nanoseconds> heartBeatList;
+    
+    // data structures for viewchange data (for acceptorLog)
+    class LogUnit {
+    public:
+        int slot; // position
+        pair<Request, int> entry; // (clientRequest, view_number)
+    };
+    class TempLog {
+    public:
+        int remaining_slots;
+        unordered_map<int, LogUnit> logset;
+    };
+    vector<TempLog> viewchange_data;
+    #include "serverLog.seg"
 
-class Learner {
+    // leader variables
 
+    
+    int patience;
+    int ntime_out;
+    void time_out() {
+        cout << "time out" << endl;
+        ++ntime_out;
+    }
+    void parsemsg(const char* buf, int buflen, struct sockaddr_in senderAddr) {
+        cout << "parsing message with length " << buflen << endl;
+        ntime_out = 0;
+        Message msg = decode(buf);
+        int sender_id, sender_view_number;
+        switch(msg.header) {
+            case HEARTBEAT: 
+            // update heartBeatList
+                sender_id = *(int*)msg.content;
+                cout << "heartbeat from " << sender_id << endl;
+                heartBeatList[sender_id] = chrono::system_clock::now().time_since_epoch();
+
+                // for early stage test
+                // acceptLog.push_back(pair<Request,int>(Request(), 4));
+                // sendPromise(myaddr);
+                break;
+            case VIEW_CHANGE: 
+                sender_view_number = *(int*)msg.content;
+                if (sender_view_number > view) {
+                    // acceptor acts
+                    view = sender_view_number;
+                    sendPromise(senderAddr);
+                }
+                break;
+            case VIEW_PROMISE:
+
+                break;
+            case CLIENT_REQUEST: 
+                break;
+            case ACCEPT_IT: 
+                break;
+            case ACCEPTED: 
+                break;
+            default:
+                cerr << "Replica Error: unknown header" << endl;
+                exit(-1);
+        }
+    }
+    void heartBeat() {
+        int k = 0;
+        char heartBuf[BUFFER_SIZE];
+        while(1) {
+            this_thread::sleep_for(chrono::milliseconds(HEART_BEAT));
+            encodeHeartBeat(heartBuf);
+            speaker->broadcast(heartBuf, sizeof(HEADER)+sizeof(int));
+        }
+    }
 };
