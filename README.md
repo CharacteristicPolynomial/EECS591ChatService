@@ -15,6 +15,7 @@ Clearly explain specific choices when implementing PAXOS.
     - IDLE, state where it is not in his view. When receiving client request in this state, it checks the heartbeat list, if haven't heard from the replicas between the current view and itself, it initializes the view_change structure and enters WAIT_PROMISE state by increase the view number to his next view number.
 
 | Leader State | VIEW_PROMISE | CLIENT_REQUEST | 
+| --- | --- |
 | LEADING | ignore | process it | 
 | WAIT_PROMISE | collect | re-enforce leadership |
 | IDLE | ignore | view change when no heartbeats |
