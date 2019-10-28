@@ -26,6 +26,7 @@ Following the philosophy of laziness and brainlessness, roles will seem very dum
 6. Learner only has one working mode. Whenever comes an ACCEPTED message, add it into some data structure, which will learn a (value, slot) once get a majority of that of a same view.
 
 ### Message digest
+
 | Role | Receiving requests | Sending requests |
 | --- | --- | --- |
 | Replica | HEARTBEAT | HEARTBEAT |
@@ -71,6 +72,7 @@ We have a HEADER enum type for headers.
 
 #### class Request
 Also we define a Request class as follows. Note that, for the Request class, it has two forms, the decoded form (Request) and the encoded form (void*)
+
 | Member of *Request* |  |
 | --- | --- |
 | (int) view | the view that sends this request with ACCEPT_IT header |
@@ -92,6 +94,7 @@ We must ensure in the lifespan of a Request, it is stored by a sequence of singl
 3. Born from Request::make_copy()
 
 ### Communication protocols
+
 | Request | Format |
 | --- | --- |
 | VIEW_CHANGE | VIEW_CHANGE (HEADER), view (int) | 
@@ -106,6 +109,7 @@ Note that, one can never send ACCEPT_IT with view number higher than itself, oth
 
 ### Log file
 To increase readabiliity of the log, we use English style log rather than binary log. Thus the log entries are "printed in ASCII" instead of being binary coded.
+
 | Log entry | Format |
 | --- | --- |
 | view change | entryLen (int), VIEW_LOG (HEADER), view (int) |
@@ -116,6 +120,7 @@ To increase readabiliity of the log, we use English style log rather than binary
 There are a few features I should implement for debugging and simulating message loss.
 ### class Phone
 This class wraps all communications, so that we can simulate different channel condition.
+
 | Member of *Phone* |  |
 | --- | --- |
 | int id | my replica ID |
@@ -138,6 +143,7 @@ This class wraps all communications, so that we can simulate different channel c
 
 ### class DebugLog
 This class wraps all debugging logs.
+
 | Member of *DebugLog* |  |
 | --- | --- |
 | bool vLogQ |  |
@@ -168,6 +174,7 @@ This class wraps all debugging logs.
     }
 
 ## Tools
+
 | Name | Usage |
 | --- | --- |
 | genConfig | Takes 2f+1 as argument, fill addressFile with usable addresses |

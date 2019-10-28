@@ -41,7 +41,7 @@ void Replica::run() {
                 break;
             case VIEW_CHANGE: 
                 sender_view_number = phone.read_int();
-                cout << "view change " <<  sender_view_number << endl;
+                // cout << "view change " <<  sender_view_number << endl;
                 // acceptor acts
                 if(view < sender_view_number) {
                     // change view
