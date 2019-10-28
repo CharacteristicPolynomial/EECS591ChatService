@@ -8,7 +8,14 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <string>
+#include <cstring>
+#include <iostream>
 using namespace std;
+
+
+string getIP(struct sockaddr_in addr);
+
+unsigned short getPort(struct sockaddr_in addr);
 
 enum HEADER {
     NO_MESSAGE,
@@ -27,12 +34,47 @@ enum HEADER {
 
 class Request {
 public:
-    Request() {
-        text = NULL;
+    void make_hole() {
+        if (text != NULL ) {
+            cerr << "making non-empty request a hole" << endl;
+            exit(-1);
+        }
+        char* temp = new char[20];
+        strcpy(temp, "NOOP");
+        text = temp;
     }
-    ~Request() {
+
+    void freeText() {
+        // one should explicitly free the memory
         delete[] text;
     }
+
+    bool operator==(const Request& r) const
+    { 
+        // we assume client always send the same message with the same seq number
+        return r.view == view && 
+        r.position == position && 
+        r.seq == seq && 
+        getIP(r.clientAddr) == getIP(clientAddr) && 
+        getPort(r.clientAddr) == getPort(clientAddr);
+    } 
+
+
+    bool contentPositionMatch(const Request& r) const
+    { 
+        // we assume client always send the same message with the same seq number
+        return r.position == position && 
+        r.seq == seq && 
+        getIP(r.clientAddr) == getIP(clientAddr) && 
+        getPort(r.clientAddr) == getPort(clientAddr);
+    } 
+    bool contentMatch(const Request& r) const
+    { 
+        // we assume client always send the same message with the same seq number
+        return r.seq == seq && 
+        getIP(r.clientAddr) == getIP(clientAddr) && 
+        getPort(r.clientAddr) == getPort(clientAddr);
+    } 
 
     Request make_copy() {
         // allocates memory!
@@ -50,13 +92,5 @@ public:
 
     int view, position, seq, textLen;
     struct sockaddr_in clientAddr;
-    const char* text;
+    const char* text = NULL;
 };
-
-string getIP(struct sockaddr_in addr) {
-    return string(inet_ntoa(addr.sin_addr));
-}
-
-unsigned short getPort(struct sockaddr_in addr) {
-    return ntohs(addr.sin_port);
-}

@@ -4,6 +4,10 @@
 #include <fstream>
 #include "message.h"
 #include "configure.h"
+#include <chrono>
+#include <ctime>
+
+std::string getTimeStr();
 using namespace std;
 
 // enum LOG_MODE {
@@ -28,6 +32,14 @@ public:
     void init(int id);
     void logSend(); // automatically start a new line
     void logRecv(); // automatically start a new line
+    void logReadLog() {
+        if (msglog_on == false)
+            return;
+        ofstream ofs;
+        ofs.open(logfile, ios_base::out | ios_base::app);
+        ofs << endl << "Read Log ";
+        ofs.close();
+    }
     void logHeader(HEADER head); 
     void logInt(int k);
     void logRequest(Request r);

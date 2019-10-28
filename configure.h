@@ -7,32 +7,16 @@
 #define MSGLOG_PREFIX "MsgLogPrefix"
 #define MSGLOG_SUFFIX "MsgLogSuffix"
 #define MSGLOG_ON "MsgLogOn"
+#define LOSS_PROBABILITY "LossProbability"
 
-#define RECV_TIME_OUT 2000 // in milliseconds
-#define HEART_BEAT_TIME 1000 // in milliseconds
+#define RECV_TIME_OUT 100 // in milliseconds
+#define HEART_BEAT_TIME 2000 // in milliseconds
 #define PATIENCE_TIME 3000 // in milliseconds
+
 
 #include <string>
 #include <fstream>
 #include <iostream>
 using namespace std;
 
-string get_config(string key) {
-    ifstream ifs;
-    ifs.open(CONFIG_FILE);
-    if(ifs.fail()) {
-        cerr << "Error: cannot open config file '" << CONFIG_FILE << "'" << endl;
-        ifs.close();
-        exit(-1);
-    }
-    string entry, value;
-    while(ifs >> entry >> value) {
-        if(entry == key) {
-            ifs.close();
-            return value;
-        }
-    }
-    ifs.close();
-    cerr << "Config error: cannot find " << key << endl;
-    exit(-1);
-}
+string get_config(string key);

@@ -10,15 +10,21 @@
 #include "debugLog.h"
 #include <chrono>
 #include <thread>
+#include <cstdlib>
 using namespace std;
 
 class Phone {
 public:
-    Phone(int myid);
+    void init(int myid);
     ~Phone();
 
     int get_f() {
         return n/2;
+    }
+    float lossp;
+    bool loss() {
+        return (static_cast <float> (rand()) / static_cast <float> (RAND_MAX) )
+            < lossp;
     }
 
     void heartBeat() {
@@ -57,8 +63,49 @@ public:
     // communication
     void send_to(int target); // send the current sendBuffer to replica #target
     void broadcast(); // broadcast the current sendBuffer to all replicas (including itself)
-    void reply(); // reply the current sendBuffer to the client, (call this only when the previous message is a client request)
+    void reply(); // reply the current sendBuffer to the sender
     void log(); // log the composed message to the log file
+
+    // log
+    HEADER phone_pickup(const char* buf, int len) {
+        // initiates a log reading
+        msglog.logReadLog();
+        readCurser = recvBuffer;
+        recvLen = len;
+        memcpy(recvBuffer, buf, len);
+        HEADER header;
+        header = *(HEADER*) readCurser;
+        readCurser += sizeof(HEADER); // read a HEADER
+        msglog.logHeader(header);
+        return header;
+    }
+    void write_acceptLog(const Request r) {
+        ofstream ofs;
+        ofs.open(logFile, ios_base::out | ios_base::app);
+        phone_call(ACCEPT_LOG);
+        write_request(r);
+        ofs.write((char*)&sendLen, sizeof(int));
+        ofs.write(sendBuffer, sendLen);
+        ofs.close();
+    }
+    void write_learnLog(const Request r) {
+        ofstream ofs;
+        ofs.open(logFile, ios_base::out | ios_base::app);
+        phone_call(LEARN_LOG);
+        write_request(r);
+        ofs.write((char*)&sendLen, sizeof(int));
+        ofs.write(sendBuffer, sendLen);
+        ofs.close();
+    }
+    void write_viewLog(int v) {
+        ofstream ofs;
+        ofs.open(logFile, ios_base::out | ios_base::app);
+        phone_call(VIEW_LOG);
+        write_int(v);
+        ofs.write((char*)&sendLen, sizeof(int));
+        ofs.write(sendBuffer, sendLen);
+        ofs.close();
+    }
 private:
     int id, fd, n;
     // id (replicaID), fd (socket file descriptor), n (total number of replicas)

@@ -2,45 +2,53 @@
 #include "configure.h"
 
 Replica::Replica(int myid) {
+    cout << "initilizing replica" << endl;
     id = myid;
     view = 0;
+    phone.init(id); // initiate phone
+    viewchange.init(&phone);
+    learner.init(&phone);
 
-    phone = new Phone(myid); // create phone
-    f = phone->get_f();
+    f = phone.get_f();
+    cout << "id " << id << " view " << view << " f " << f << endl;
     heartBeatList = vector<chrono::nanoseconds>(2*f + 1); // if n is even, the last slot is unused
     leaderQ = false;
     parseLogFile();
-}
 
-Replica::~Replica() {
-    delete phone;
-}
-
-void Replica::parseLogFile() {
-
+    // if the replica is in his view, then start a view change
+    if( view%(2*f+1) == id) {
+        viewchange.start(view);
+    }
 }
 
 void Replica::run() {
     // periodically send heartbeats
-    thread hp(&Phone::heartBeat, phone); // create heart beat thread
+    thread hp(&Phone::heartBeat, &phone); // create heart beat thread
 
     int sender_id;
     int sender_view_number;
+    int cl;
     while(1) {
         // pickup the phone!
-        switch (phone->phone_pickup())
+        switch (phone.phone_pickup())
         {
+            case NO_MESSAGE:
+            
+                break;
             case HEARTBEAT: 
-                sender_id = phone->read_int();
+                sender_id = phone.read_int();
                 heartBeatList[sender_id] = chrono::system_clock::now().time_since_epoch();
                 break;
             case VIEW_CHANGE: 
-                sender_view_number = phone->read_int();
+                sender_view_number = phone.read_int();
+                cout << "view change " <<  sender_view_number << endl;
                 // acceptor acts
                 if(view < sender_view_number) {
                     // change view
                     view = sender_view_number;
-                    viewLog();
+                    // quit the leader
+                    leaderQ = false;
+                    phone.write_viewLog(view);
                     // send promise
                     sendPromise();
                 } else if (view == sender_view_number) {
@@ -49,13 +57,18 @@ void Replica::run() {
                 break;
             case VIEW_PROMISE:
                 // leader in state WAIT_PROMISE acts
-                if (view%(2*f+1) == id && !leaderQ) {
-                    receivePromise();
+                if ((view%(2*f+1) == id) && (!leaderQ)) {
+                    if(viewchange.add_data() >= f+1) {
+                        // majority got!
+                        leaderQ = true;
+                        // process view change data
+                        process_view_change();
+                    }
                 }
                 break;
             case CLIENT_REQUEST: 
                 // leader acts
-                int cl = view%(2*f+1);
+                cl = view%(2*f+1);
                 if (cl != id) {
                     // state IDLE
                     if (!check_heart_beat()) {
@@ -65,9 +78,9 @@ void Replica::run() {
                         } else {
                             view += id - cl;
                         }
-                        viewLog();
+                        phone.write_viewLog(view);
                         // initiate view change
-                        viewchange.init();
+                        viewchange.start(view);
                     }
                 } else if (!leaderQ) {
                     // state WAIT_PROMISE
@@ -79,16 +92,11 @@ void Replica::run() {
                 break;
             case ACCEPT_IT: 
                 // acceptor acts
-                sender_view_number = phone->read_int(); 
-                Request r = phone->read_request();
-                if(view <= sender_view_number) {
-                    accept_it(sender_view_number, r);
-                }
+                accept_it();
                 break;
             case ACCEPTED: 
-                cout << "[MESSAGE TYPE: ACCEPTED] ";
                 // learner acts
-                learner.accepted(msg.content, chatLog);
+                learner.accepted();
                 break;
             default:
                 cerr << "Replica Error: unknown header" << endl;
@@ -100,27 +108,11 @@ void Replica::run() {
 bool Replica::check_heart_beat() {
     // ENSURE id != view%(2*f+1)
     int cl = view%(2*f+1);
-    if(id > cl) {
-        for(int k=cl; k< id; k++) {
-            if(time_since_last_heartbeat(k) <= PATIENCE_TIME) {
-                // there are living processes between the view leader and me
-                return true;
-            }
-        }
+    int dis = 0;
+    if (id > cl) {
+        dis = id-cl;
     } else {
-        // we have id < cl
-        for(int k=cl; k< 2*f+1; k++) {
-            if(time_since_last_heartbeat(k) <= PATIENCE_TIME) {
-                // there are living processes between the view leader and me
-                return true;
-            }
-        }
-        for(int k=0; k< id; k++) {
-            if(time_since_last_heartbeat(k) <= PATIENCE_TIME) {
-                // there are living processes between the view leader and me
-                return true;
-            }
-        }
+        dis = 2*f+1+id-cl;
     }
-    return false;
+    return time_since_last_heartbeat(cl) <= PATIENCE_TIME * dis;
 }

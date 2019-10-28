@@ -1,5 +1,14 @@
 #include "debugLog.h"
 
+std::string getTimeStr() {
+    std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+    std::string s(22, '\0');
+    std::strftime(&s[0], s.size(), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+    return s;
+}
+
+
 void MsgLog::init (int id) {
     string ans = get_config(MSGLOG_ON);
     msglog_on = (ans == "True");
@@ -17,7 +26,7 @@ void MsgLog::logSend() {
         return;
     ofstream ofs;
     ofs.open(logfile, ios_base::out | ios_base::app);
-    ofs << endl << "Send ";
+    ofs << endl << getTimeStr() << " Send ";
     ofs.close();
 }
 
@@ -26,7 +35,7 @@ void MsgLog::logRecv() {
         return;
     ofstream ofs;
     ofs.open(logfile, ios_base::out | ios_base::app);
-    ofs << endl << "Recv ";
+    ofs << endl <<  getTimeStr() << " Recv ";
     ofs.close();
 }
 
@@ -68,6 +77,9 @@ void MsgLog::logHeader(HEADER head) {
             break;
         case ACK:
             ofs << "[ACK] ";
+            break;
+        case HEADERSIZE:
+            ofs << "[HEADERSIZE] ";
             break;
     }
     ofs.close();
@@ -119,7 +131,7 @@ void MsgLog::log_reply() {
         return;
     ofstream ofs;
     ofs.open(logfile, ios_base::out | ios_base::app);
-    ofs << "(Reply to client) ";
+    ofs << "(Reply to the previous sender) ";
     ofs.close();
 }
 

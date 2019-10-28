@@ -1,9 +1,12 @@
 #include "phone.h"
 
-Phone::Phone(int myid) {
+void Phone::init(int myid) {
+    cout << "initilizing phone" << endl;
     id = myid;
     
     // initialize according to the config file
+    lossp = stof(get_config(LOSS_PROBABILITY));
+
     msglog.init(id);
     logFile = get_config(LOGFILE_PREFIX) + to_string(id) + get_config(LOGFILE_SUFFIX);
 
@@ -15,6 +18,7 @@ Phone::Phone(int myid) {
 }
 
 Phone::~Phone() {
+    cout << "destructing phone" << endl;
     delete[] recvBuffer;
     delete[] sendBuffer;
 }
@@ -73,7 +77,7 @@ HEADER Phone::phone_pickup() {
     // acts the recv function
     msglog.logRecv();
     readCurser = recvBuffer;
-    socklen_t addrLen; 
+    socklen_t addrLen = sizeof(struct sockaddr_in); 
     recvLen = recvfrom(fd, recvBuffer, BUFFER_SIZE, 0, 
         (struct sockaddr*)&comingAddr, &addrLen);
     HEADER header;
@@ -84,7 +88,7 @@ HEADER Phone::phone_pickup() {
             header = NO_MESSAGE;
         } else {
             // error
-            cerr << "Error: socket recvfrom() error." << endl;
+            cerr << "Error: socket recvfrom() error. " << strerror(errno) << endl;
             exit(-1);
         }
     } else {
@@ -93,6 +97,7 @@ HEADER Phone::phone_pickup() {
         readCurser += sizeof(HEADER); // read a HEADER
     }
     msglog.logHeader(header);
+    return header;
 }
 
 int Phone::read_int() {
@@ -112,6 +117,7 @@ char* Phone::read_text(int len) {
     char* buf = new char[len];
     memcpy(buf, readCurser, len);
     readCurser += len;
+    return buf;
 }
 
 Request Phone::read_request() {
@@ -194,6 +200,8 @@ void Phone::phone_call(HEADER header) {
 
 void Phone::send_to(int target) {
     msglog.log_send_to(target); // log it
+    if (loss()) 
+        return;
     if (sendto(fd, sendBuffer,sendLen, 0, 
         (struct sockaddr*) &replicaAddrs[target], sizeof(struct sockaddr_in)) < 0) {
         cout << "sendto failed: " << strerror(errno) << endl;
@@ -203,6 +211,8 @@ void Phone::send_to(int target) {
 
 void Phone::broadcast() {
     msglog.log_broadcast(); // log it
+    if (loss()) 
+        return;
     for(int target=0; target<n; target++) {
         if (sendto(fd, sendBuffer,sendLen, 0, 
             (struct sockaddr*) &replicaAddrs[target], sizeof(struct sockaddr_in)) < 0) {
@@ -214,6 +224,8 @@ void Phone::broadcast() {
 
 void Phone::reply() {
     msglog.log_reply();
+    if (loss()) 
+        return;
     if (sendto(fd, sendBuffer,sendLen, 0, 
             (struct sockaddr*) &comingAddr, sizeof(struct sockaddr_in)) < 0) {
             cout << "sendto failed: " << strerror(errno) << endl;
