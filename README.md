@@ -22,7 +22,7 @@ Following the philosophy of laziness and brainlessness, roles will seem very dum
     - LEADING, state where it gets majority in his view. In the LEADING state, the process goes as a leader. 
     - WAIT_PROMISE, state where it is in his view but hasn't got the majority. When receiving client request in this state, it enfoces viewchange to others. It goes to LEADING when the majority is obtained (by setting leaderQ=true). 
     - IDLE, state where it is not in his view. When receiving client request in this state, it checks the heartbeat list, if haven't heard from the replicas between the current view and itself, it initializes the view_change structure and enters WAIT_PROMISE state by increase the view number to his next view number.
-5. Acceptor only has one working mode. When receiving VIEW_CHANGE, change view if it has a higher view and send all the VIEW_PROMISE packets and increases the view. If the coming view is the same as my view, send all the VIEW_PROMISE packets without changing the view. When receiving ACCEPT_IT, if the view is higher than my view, accept it and broadcast ACCEPTED messages.
+5. Acceptor only has one working mode. When receiving VIEW_CHANGE, change view if it has a higher view and send all the VIEW_PROMISE packets and increases the view. If the coming view is the same as my view, send all the VIEW_PROMISE packets without changing the view. When receiving ACCEPT_IT, if the view is no less than my view, accept it and broadcast ACCEPTED messages. 
 6. Learner only has one working mode. Whenever comes an ACCEPTED message, add it into some data structure, which will learn a (value, slot) once get a majority of that of a same view.
 
 ### Message digest
@@ -92,10 +92,12 @@ Also we define a Request class as follows. Note that, for the Request class, it 
 | VIEW_CHANGE | VIEW_CHANGE (HEADER), view (int) | 
 | VIEW_PROMISE | VIEW_PROMISE (HEADER), view (int), replicaID (int), totalLogLen (int), request (Request)|
 | CLIENT_REQUEST | CLIENT_REQUEST (HEADER), seq (int), textlen (int), text (no-type) |
-| ACCEPT_IT | ACCEPT_IT (HEADER), view (int), request (Request) |
-| ACCEPTED |  ACCEPTED (HEADER), view (int), replicaID (int), request (Request) |
+| ACCEPT_IT | ACCEPT_IT (HEADER), request (Request) |
+| ACCEPTED |  ACCEPTED (HEADER), request (Request), replicaID (int) |
 | ACK | ACK (HEADER), seq (int) |
 | HEARTBEAT | HEARBEAT (HEADER), replicaID (int) |
+
+Note that, one can never send ACCEPT_IT with view number higher than itself, otherwise I can not be the leader. However, one may send VIEW_PROMISE to a view that is lower than its highest accepted view, but that doesn't matter, since even though it sends the promise, the sender cannot get majority.
 
 ### Log file
 To increase readabiliity of the log, we use English style log rather than binary log. Thus the log entries are "printed in ASCII" instead of being binary coded.

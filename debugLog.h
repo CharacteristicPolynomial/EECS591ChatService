@@ -37,6 +37,6 @@ public:
     void log_log();
 private:
     string logfile;
-    bool msglog_on;
+    bool msglog_on=false;
     
 };

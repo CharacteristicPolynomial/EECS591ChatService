@@ -10,6 +10,7 @@
 
 #define RECV_TIME_OUT 2000 // in milliseconds
 #define HEART_BEAT_TIME 1000 // in milliseconds
+#define PATIENCE_TIME 3000 // in milliseconds
 
 #include <string>
 #include <fstream>

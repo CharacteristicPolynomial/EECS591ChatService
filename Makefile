@@ -1,7 +1,7 @@
 all: makeReplica makeClient genConfig
 
 makeReplica: makeReplica.cpp replica.cpp replicaTools.cpp phone.cpp message.cpp debugLog.cpp
-	g++ makeReplica.cpp replica.cpp replicaTools.cpp phone.cpp message.cpp debugLog.cpp -o makeReplica
+	g++ -pthread makeReplica.cpp replica.cpp replicaTools.cpp phone.cpp message.cpp debugLog.cpp -o makeReplica
 
 makeClient: 
 	ls

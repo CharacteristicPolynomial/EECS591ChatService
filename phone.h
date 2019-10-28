@@ -8,6 +8,8 @@
 #include "configure.h"
 #include "message.h"
 #include "debugLog.h"
+#include <chrono>
+#include <thread>
 using namespace std;
 
 class Phone {
@@ -17,6 +19,28 @@ public:
 
     int get_f() {
         return n/2;
+    }
+
+    void heartBeat() {
+        // we use independent buffers from normal phone usage
+        // we don't log heart beat sending
+        // writing some replicated code here
+        char heartBuf[BUFFER_SIZE];
+        HEADER header = HEARTBEAT;
+        int msglen = sizeof(HEADER) + sizeof(int);
+        while(1) {
+            this_thread::sleep_for(chrono::milliseconds(HEART_BEAT_TIME));
+                // broadcast
+                for(auto it=replicaAddrs.begin(); it!=replicaAddrs.end(); it++) {
+                    struct sockaddr_in temp = *it;
+                    memcpy(heartBuf, &header, sizeof(HEADER));
+                    memcpy(heartBuf+sizeof(HEADER), &id, sizeof(id));
+                    if (sendto(fd, heartBuf, msglen, 0, (struct sockaddr*) &temp, sizeof(temp)) < 0) {
+                        cout << "sendto failed: " << strerror(errno) << endl;
+                        exit(-1);
+                }
+            }
+        }
     }
 
     // read and write the buffers

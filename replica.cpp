@@ -8,16 +8,26 @@ Replica::Replica(int myid) {
     phone = new Phone(myid); // create phone
     f = phone->get_f();
     heartBeatList = vector<chrono::nanoseconds>(2*f + 1); // if n is even, the last slot is unused
+    leaderQ = false;
+    parseLogFile();
 }
 
 Replica::~Replica() {
     delete phone;
 }
 
+void Replica::parseLogFile() {
+
+}
+
 void Replica::run() {
+    // periodically send heartbeats
+    thread hp(&Phone::heartBeat, phone); // create heart beat thread
+
     int sender_id;
     int sender_view_number;
     while(1) {
+        // pickup the phone!
         switch (phone->phone_pickup())
         {
             case HEARTBEAT: 
@@ -26,33 +36,54 @@ void Replica::run() {
                 break;
             case VIEW_CHANGE: 
                 sender_view_number = phone->read_int();
-                if (sender_view_number >= view) {
+                // acceptor acts
+                if(view < sender_view_number) {
+                    // change view
                     view = sender_view_number;
-                    if(sender_view_number > view) {
-                        // write log
-                        viewlog();
-                        // leader acts
-                        newLeader();
-                    }
-
-                    // acceptor acts
-                    sendPromise(senderAddr);
-
+                    viewLog();
+                    // send promise
+                    sendPromise();
+                } else if (view == sender_view_number) {
+                    sendPromise();
                 }
                 break;
             case VIEW_PROMISE:
-                cout << "[MESSAGE TYPE: VIEW_PROMISE] ";
-                // leader acts
-                receivePromise(msg.content);
+                // leader in state WAIT_PROMISE acts
+                if (view%(2*f+1) == id && !leaderQ) {
+                    receivePromise();
+                }
                 break;
             case CLIENT_REQUEST: 
-                cout << "[MESSAGE TYPE: CLIENT_REQUEST] ";
-                receiveRequest(msg.content, senderAddr);
+                // leader acts
+                int cl = view%(2*f+1);
+                if (cl != id) {
+                    // state IDLE
+                    if (!check_heart_beat()) {
+                        // change view
+                        if(id < cl) {
+                            view +=  id + 2*f+1  - cl;
+                        } else {
+                            view += id - cl;
+                        }
+                        viewLog();
+                        // initiate view change
+                        viewchange.init();
+                    }
+                } else if (!leaderQ) {
+                    // state WAIT_PROMISE
+                    enforceViewChange();
+                } else {
+                    // state LEADING
+                    process_request();
+                }
                 break;
             case ACCEPT_IT: 
-                cout << "[MESSAGE TYPE: ACCEPT_IT] ";
                 // acceptor acts
-                acceptit(msg.content);
+                sender_view_number = phone->read_int(); 
+                Request r = phone->read_request();
+                if(view <= sender_view_number) {
+                    accept_it(sender_view_number, r);
+                }
                 break;
             case ACCEPTED: 
                 cout << "[MESSAGE TYPE: ACCEPTED] ";
@@ -64,4 +95,32 @@ void Replica::run() {
                 exit(-1);
         }
     }
+}
+
+bool Replica::check_heart_beat() {
+    // ENSURE id != view%(2*f+1)
+    int cl = view%(2*f+1);
+    if(id > cl) {
+        for(int k=cl; k< id; k++) {
+            if(time_since_last_heartbeat(k) <= PATIENCE_TIME) {
+                // there are living processes between the view leader and me
+                return true;
+            }
+        }
+    } else {
+        // we have id < cl
+        for(int k=cl; k< 2*f+1; k++) {
+            if(time_since_last_heartbeat(k) <= PATIENCE_TIME) {
+                // there are living processes between the view leader and me
+                return true;
+            }
+        }
+        for(int k=0; k< id; k++) {
+            if(time_since_last_heartbeat(k) <= PATIENCE_TIME) {
+                // there are living processes between the view leader and me
+                return true;
+            }
+        }
+    }
+    return false;
 }
