@@ -60,15 +60,15 @@ Below is a possible command sequence.
 
 **Note:** 
 1. There will be some information going in the manager's terminal, which is used to reassure that the system is keeping live.
-As a result, you may want to type `ps` and enter to pause the service.
-Note that, the replicas are using system time clock. Therefore, when you type `ps`, you are not really freezing the time of the replicas. You are just holding them from executing. 
+As a result, you may want to type `ps` and press Enter to pause the service.
+Note that, the replicas are using the system time clock. Therefore, when you call `ps`, you are not really freezing the time of the replicas. You are just holding them from executing. 
 As a side effect, there could appear unnecessary view change sessions after a long pause. Since all the replicas look at the system clock and find that it has been a long (system) time since the last time I received the heartbeat from the leader.
 2. By calling `exit` in `manager` will not automatically delete any log file. You can either call `init` in `manager` before calling `exit`. Or you can use the command `make cleanLog` to remove the logs.
 3. You can of course open another terminal (could be on a difference device) to create manual/automatic mode clients. You need to get the address file of the replicas before running clients on other devices.
-4. The program `manager` don't support having servers deployed on different device (in fact, it is not supported even in different directories on the same machine). However, the replicas support this. Thus it is just a matter of some tricks to have replicas deplyed on different locations. For example, you can do the following.
+4. The program `manager` don't naturally support depolying servers on different device. However, the replicas support this. Thus it is just a matter of some deploying tricks. For example, you can do the following.
     - Run `manager` on machine A with 101 replicas.
     - Run `manager` on machine B with 101 replicas.
-    - Before activating and replicas, replace address files on both machiens with (first 50 addresses of A) || (last 51 addresses of B).
+    - Before activating the replicas, replace address files on both machiens with the address list (first 50 addresses of A) || (last 51 addresses of B).
     - A's `manager` only governs the first 50 replicas and B's `manager` governs the rest.
     - Do whatever you want from now on.
 
@@ -82,6 +82,8 @@ As a side effect, there could appear unnecessary view change sessions after a lo
 | MessageLog | log for all messages of replicas (for debug) | English |
 | AcceptLog | log for all accepted slots of replicas (for debug) | English |
 
+### Configurations
+Lots of parameters can be tuned. Some can be set directly from the config file and some may need some changes of the code.
 - Set configurations in serverConfigure.config (no recompilation needed).
 - Tune more parameters in configure.h (recompliation needed).
 
