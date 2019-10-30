@@ -68,7 +68,7 @@ As a side effect, there could appear unnecessary view change sessions after a lo
     - Run `manager` on machine A with 101 replicas.
     - Run `manager` on machine B with 101 replicas.
     - Before activating and replicas, replace address files on both machiens with (first 50 addresses of A) || (last 51 addresses of B).
-    - A's manager only governs the first 50 replicas and B's manager governs the rest.
+    - A's `manager` only governs the first 50 replicas and B's `manager` governs the rest.
     - Do whatever you want from now on.
 
 ### Files
