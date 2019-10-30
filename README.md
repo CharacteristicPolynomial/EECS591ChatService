@@ -109,3 +109,11 @@ In the following sections I will describe what exactly each role will act. Note 
 | Name | Usage |
 | --- | --- |
 | genConfig | Takes 2f+1 as argument, fill addressFile with usable addresses |
+| manager | a command line program that manages the processes |
+
+## Request Memory Track
+1. VIEW_PROMISE: Phone::read_request()->TempLog::append()->(TempLog or Die)
+2. VIEW_PROMISE: ViewChange -> update(), make_copy() replaces acceptLog
+3. CLIENT_REQEUST: in process_request(), make_request()-> (Die or stores in acceptLog)
+4. ACCEPT_IT: read_request()->(Die or store in acceptLog)
+5. accepted: read_request()->(store in learner)

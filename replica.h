@@ -2,6 +2,7 @@
 
 #include "phone.h"
 #include "replicaTools.h"
+#include "timer.h"
 #include <thread>
 #include <chrono>
 #include <iostream>
@@ -19,9 +20,13 @@ private:
 
     Phone phone; // general phone
     RequestList acceptLog; // store accept_it requests
+    string acceptLogFile;
     ViewChange viewchange; // store viewpromise requests
+    Timer viewchangeTimer;
+    Timer requestTimer;
     Learner learner; // store accepted requests
     vector<chrono::nanoseconds> heartBeatList;
+    chrono::nanoseconds bornTime;
 
     int time_since_last_heartbeat(int myid) {
         chrono::milliseconds ps = 
@@ -48,11 +53,11 @@ private:
                         break;
                     case ACCEPT_LOG:
                         r = phone.read_request();
-                        learner.learnLog.add(r);
+                        acceptLog.add(r);
                         break;
                     case LEARN_LOG:
                         r = phone.read_request();
-                        acceptLog.add(r);
+                        learner.learnLog.add(r);
                         break;
                     default:
                         cerr << "Replica Error: unknown header (Parsing file)" << endl;
@@ -65,6 +70,8 @@ private:
         }
         ifs.close();
     }
+    RoundRobin rb;
+    
     void sendPromise() { // send promise to current view
         // format
         // header, view, replicaID, totalLogLen, request
@@ -75,9 +82,12 @@ private:
             phone.write_int(id);
             phone.write_int(acceptLog.length);
             phone.reply();
-
         } else {
+            rb.next_round();
+            int k = acceptLog.slots.size();
             for(auto slot : acceptLog.slots) {
+                if(!rb.filter(k))
+                    continue;
                 if(slot.second) {
                     // if it is not empty
                     phone.phone_call(VIEW_PROMISE);
@@ -96,7 +106,7 @@ private:
         // header, view
         phone.phone_call(VIEW_CHANGE);
         phone.write_int(view);
-        phone.broadcast();
+        phone.broadcastExcept(viewchange.completeList);
     }
     void process_request() {
         // process the request as a leading leader
@@ -109,22 +119,30 @@ private:
             r.freeText();
         } else {
             int k = 0;
+            int msgn = 0;
+            learner.updateExecN(id);
             for(auto& entry : acceptLog.slots) {
                 if (! learner.filledQ(k)) {
                     // only enforce unlearned slots
                     if (entry.second == false) {
                         // if it is a hole
                         // fill it with no-op
-                        entry.first.make_hole();
+                        entry.first.make_hole(view, k);
                         entry.second = true;
                         phone.write_acceptLog(entry.first);
                     }
                     phone.phone_call(ACCEPT_IT);
                     phone.write_request(entry.first);
                     phone.broadcast();
+                    msgn++;
+                    if(msgn > ROUNDROBIN) {
+                        r.freeText();
+                        return;
+                    }
                 }
                 r.position = k;
                 if(entry.first.contentPositionMatch(r)) {
+                    r.freeText();
                     return;
                 } 
                 k++;
@@ -137,9 +155,17 @@ private:
     }
     void accept_it() {
         Request r = phone.read_request();
+        int sender_id;
+        sender_id = r.view % (2*f +1);
+        heartBeatList[sender_id] = chrono::system_clock::now().time_since_epoch();
+        if (r.view > view) {
+            view = r.view;
+            phone.write_viewLog(view);
+        }
         if (r.view >= view) {
             // accept it, log and broadcast it
             acceptLog.add(r);
+            acceptLog.saveAccept(acceptLogFile);
             phone.write_acceptLog(r);
             // format
             // header request replicaID
@@ -147,6 +173,8 @@ private:
             phone.write_request(r);
             phone.write_int(id);
             phone.broadcast();
+        } else {
+            r.freeText();
         }
     }
     void process_view_change() {

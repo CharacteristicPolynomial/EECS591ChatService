@@ -8,11 +8,20 @@
 #define MSGLOG_SUFFIX "MsgLogSuffix"
 #define MSGLOG_ON "MsgLogOn"
 #define LOSS_PROBABILITY "LossProbability"
+#define CHATLOG_PREFIX "ChatLogPrefix"
+#define CHATLOG_SUFFIX "ChatLogSuffix"
+#define ACCEPTLOG_PREFIX "AcceptLogPrefix"
+#define ACCEPTLOG_SUFFIX "AcceptLogSuffix"
 
-#define RECV_TIME_OUT 100 // in milliseconds
-#define HEART_BEAT_TIME 2000 // in milliseconds
-#define PATIENCE_TIME 3000 // in milliseconds
+#define RECV_TIME_OUT 1000 // in milliseconds
+#define HEART_BEAT_TIME 500 // in milliseconds
+#define VIEW_CHANGE_TIME 200 // in milliseconds
+#define REQUEST_TIME 100 // in milliseconds
+#define PATIENCE_TIME 5000 // in milliseconds
+#define PATIENCE_TIME_INCREMENT 100 // in milliseconds
+#define CLIENT_RETRY_TIME 100 // in milliseconds
 
+#define ROUNDROBIN 10
 
 #include <string>
 #include <fstream>

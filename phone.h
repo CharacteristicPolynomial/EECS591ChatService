@@ -11,6 +11,7 @@
 #include <chrono>
 #include <thread>
 #include <cstdlib>
+#include <unordered_set>
 using namespace std;
 
 class Phone {
@@ -65,6 +66,7 @@ public:
     void broadcast(); // broadcast the current sendBuffer to all replicas (including itself)
     void reply(); // reply the current sendBuffer to the sender
     void log(); // log the composed message to the log file
+    void broadcastExcept(unordered_set<int> exceptList);
 
     // log
     HEADER phone_pickup(const char* buf, int len) {

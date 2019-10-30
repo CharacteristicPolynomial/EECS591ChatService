@@ -18,6 +18,7 @@ using namespace std;
 #include "message.h"
 
 vector<struct sockaddr_in> serverAddr;
+string name;
 
 void parseAddr(const char* addrFile) {
     ifstream ifs;
@@ -39,6 +40,66 @@ void parseAddr(const char* addrFile) {
         serverAddr.push_back(temp);
     }
     ifs.close();
+}
+
+
+int automatic(int fd) {
+    int seq = 0;
+    char msg[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE];
+    while(1) {
+        string request;
+        request = "robot message " + to_string(seq);
+        while(1) {
+            for(auto it=serverAddr.begin(); it!=serverAddr.end(); it++) {
+                struct sockaddr_in temp = *it;
+                // format: header, seq, len, text
+                HEADER header = CLIENT_REQUEST;
+                memcpy(msg, &header, sizeof(HEADER));
+                memcpy(msg+sizeof(HEADER), &seq, sizeof(int));
+                int k = request.size();
+                memcpy(msg+sizeof(HEADER)+sizeof(int), &k, sizeof(int));
+                memcpy(msg+sizeof(HEADER)+2*sizeof(int), request.c_str(), k);
+                if (sendto(fd, msg, sizeof(HEADER)+k+2*sizeof(int), 0, (struct sockaddr*) &temp, sizeof(temp)) < 0) {
+                    cout << "sendto failed: " << strerror(errno) << endl;
+                    exit(-1);
+                }
+            }
+
+            int dgramsize;
+            dgramsize = recvfrom(fd, buffer, BUFFER_SIZE, 0, 0, 0);
+            if(dgramsize == -1) {
+                // recv error
+                if(errno == 11) {
+                    // time out 
+                } else {
+                    // error
+                    cerr << "Error: socket recvfrom() error." << endl;
+                    exit(-1);
+                }
+            } else {
+                // received a datagram
+                // format: ACK, ID
+                HEADER header = *(HEADER*) buffer;
+                int tempseq = *(int*) (buffer + sizeof(HEADER));
+                if (header != ACK) {
+                    // error dectection
+                    cerr << "Error: client received non-ack message." << endl;
+                    exit(-1);       
+                }
+                if (tempseq > seq) {
+                    // error dectection
+                    cerr << "Error: client received unexpected sequence number." << endl;
+                    exit(-1);                    
+                } else if (tempseq == seq) {
+                    // the request is processed
+                    break;
+                }
+            }
+        }
+        cout << "client " << name << "'s request #" << seq << " gets ACK" << endl;
+        seq ++;
+    }
 }
 
 int manual(int fd) {
@@ -103,9 +164,10 @@ int manual(int fd) {
 
 int main(int argc, const char * argv[]) {
     // -m, manual mode
-    // addrFile
+    // -a, automatic mode
+    // format: ./makeClient [mode] name
     if(argc < 2) {
-        cerr << "missing arguments: [-m] " << endl;
+        cerr << "missing arguments: format: ./makeClient [mode] name " << endl;
         exit(-1);
     }
     parseAddr(get_config(ADDRESS_FILE).c_str());
@@ -130,13 +192,23 @@ int main(int argc, const char * argv[]) {
 
     // set time outs to 
     struct timeval tv;
-    tv.tv_sec = RECV_TIME_OUT / 1000;
-    tv.tv_usec = 1000 * (RECV_TIME_OUT % 1000);
+    tv.tv_sec = CLIENT_RETRY_TIME / 1000;
+    tv.tv_usec = 1000 * (CLIENT_RETRY_TIME % 1000);
     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         perror("Error: cannot set time out");
     }
 
     if(strcmp(argv[1], "-m")==0) {
         return manual(fd);
+    } else if(strcmp(argv[1], "-a")==0) {
+        if(argc < 3) {
+            cerr << "missing arguments: format: ./makeClient [mode] name " << endl;
+            exit(-1);
+        }
+        name = string(argv[2]);
+        return automatic(fd);
+    } else {
+        cerr << "unknown client mode " << argv[1] << endl;
+        exit(-1);
     }
 }
