@@ -427,7 +427,7 @@ int main() {
                 cout << "you haven't started the service" << endl;
                 continue;
             }
-            if(pausedQ == false) {
+            if(pausedQ == false && state == RUNNING) {
                 cout << "you may only check consistency when the service is paused" << endl;
                 continue;
             }
@@ -437,7 +437,7 @@ int main() {
                 cout << "you haven't started the service" << endl;
                 continue;
             }
-            if(pausedQ == false) {
+            if(pausedQ == false && state == RUNNING) {
                 cout << "you may only check logs when the service is paused" << endl;
                 continue;
             }

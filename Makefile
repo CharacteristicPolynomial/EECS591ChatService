@@ -12,5 +12,10 @@ genConfig: genConfig.cpp configure.cpp
 manager: manager.cpp configure.cpp
 	g++ manager.cpp configure.cpp -o manager
 
-clean:
+clean: cleanExecutable cleanLog
+
+cleanExecutable:
 	rm makeReplica genConfig makeClient manager
+
+cleanLog:
+	rm replica_addresses.list replica_*.log replica_*.msglog replica_*.acceptlog replica_*.chatlog
