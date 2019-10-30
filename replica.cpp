@@ -9,6 +9,9 @@ Replica::Replica(int myid) {
     viewchange.init(&phone);
     learner.init(&phone, id);
 
+
+    holep = stof(get_config(HOLE_PROBABILITY));
+
     viewchangeTimer.init(chrono::duration_cast<chrono::nanoseconds>(
                 chrono::milliseconds(VIEW_CHANGE_TIME)));
     requestTimer.init(chrono::duration_cast<chrono::nanoseconds>(

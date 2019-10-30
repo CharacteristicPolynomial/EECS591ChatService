@@ -17,6 +17,7 @@ private:
     int id;
     int f;
     bool leaderQ;
+    float holep;
 
     Phone phone; // general phone
     RequestList acceptLog; // store accept_it requests
@@ -147,11 +148,18 @@ private:
                 } 
                 k++;
             }
+            // if(hole()) {
+            //     k++;
+            // }
             r.position = k;
             // not accepted yet, add this to acceptLog and log it!
             acceptLog.add(r);
             phone.write_acceptLog(r);
         }
+    }
+    bool hole() {
+        return (static_cast <float> (rand()) / static_cast <float> (RAND_MAX) )
+            < holep;
     }
     void accept_it() {
         Request r = phone.read_request();

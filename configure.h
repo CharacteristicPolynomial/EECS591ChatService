@@ -8,6 +8,7 @@
 #define MSGLOG_SUFFIX "MsgLogSuffix"
 #define MSGLOG_ON "MsgLogOn"
 #define LOSS_PROBABILITY "LossProbability"
+#define HOLE_PROBABILITY "HoleProbability"
 #define CHATLOG_PREFIX "ChatLogPrefix"
 #define CHATLOG_SUFFIX "ChatLogSuffix"
 #define ACCEPTLOG_PREFIX "AcceptLogPrefix"

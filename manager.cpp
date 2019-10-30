@@ -163,6 +163,14 @@ void resumeService() {
     }
 }
 
+void resumeReplica(int id) {
+    kill(replicas[id], SIGCONT);
+}
+
+void pauseReplica(int id) {
+    kill(replicas[id], SIGSTOP);
+}
+
 void pauseService() {
     if (pausedQ == true) {
         cout << "it has been paused already" << endl;
@@ -171,18 +179,14 @@ void pauseService() {
     cout << "pausing the servers" << endl;
     pausedQ = true;
     for(auto p : replicas) {
-        // cout << "killing replica " << p.first << endl; 
-        kill(p.second, SIGKILL);
+        pauseReplica(p.first);
     }
 }
 
 void closeService() {
     cout << "closing the servers" << endl;
-    if(pausedQ == false) {
-        for(auto p : replicas) {
-            // cout << "killing replica " << p.first << endl; 
-            kill(p.second, SIGKILL);
-        }
+    for(auto p : replicas) {
+        kill(p.second, SIGKILL);
     }
     replicas.clear();
 }
@@ -212,23 +216,6 @@ void addRobotClient() {
     }
 }
 
-
-void resumeReplica(int id) {
-    pid_t pid = fork();
-    if(pid == 0) {
-        // children process
-        string temp;
-        temp = to_string(id);
-        execl("./makeReplica", "makeReplica", temp.c_str(), NULL);
-    } else {
-        // parent process
-        // do nothing
-        replicas[id] = pid;
-        // cout << "Replica " << id << " resumed" << endl;
-    }
-}
-
-
 void activateReplica(int id) {
     if (id >= n) {
         cout << "activate replica " << id << " failed (you only have " << n << " replicas)" << endl;
@@ -238,10 +225,6 @@ void activateReplica(int id) {
         cout << "activate replica " << id << " failed (replica " << id << " has been activated)" << endl;
         return;
     }
-    if (pausedQ == true) {
-        replicas[id] = 0;
-        return;
-    }
     pid_t pid = fork();
     if(pid == 0) {
         // children process
@@ -252,6 +235,10 @@ void activateReplica(int id) {
         // parent process
         // do nothing
         replicas[id] = pid;
+        if (pausedQ == true) {
+            pauseReplica(id);
+            return;
+        }
         // cout << "Replica " << id << " activated" << endl;
     }
 }
@@ -264,10 +251,6 @@ void killReplica(int id) {
     if (replicas.find(id) == replicas.end()) {
         cout << "kill replica " << id << " failed (replica " << id << " hasn't been activated)" << endl;
         return;
-    }
-    if(pausedQ == true) {
-        replicas.erase(id);
-        return;    
     }
     kill(replicas[id], SIGKILL);
     replicas.erase(id);
@@ -310,10 +293,10 @@ void printHelp() {
     cout << "addRobotClientN(arcn) [n] : " << "add n robot clients" << endl;
     cout << "activateReplica(ar) [n] : " << "activate replica n" << endl;            
     cout << "activateReplicaRange(arr) [b] [e] : " << "activate replicas b, b+1, ..., e-1" << endl;
-    cout << "resumeService(rs) : " << "activate all paused replicas" << endl;
+    cout << "resumeService(rs) : " << "resume all paused replicas" << endl;
     cout << "killReplica(kr) [n] : " << "kill replica n" << endl;
     cout << "killReplicaRange(krr) [b] [e] : " << "kill replicas b, b+1, ..., e-1" << endl;
-    cout << "pauseService(ps) : " << "kill all living replicas" << endl;
+    cout << "pauseService(ps) : " << "pause all living replicas" << endl;
     cout << "checkConsistency(cc) : " << "check whether the chat logs are consistent" << endl;
     cout << "checkLog(cl) : " << "print information of chat logs" << endl;
 }
