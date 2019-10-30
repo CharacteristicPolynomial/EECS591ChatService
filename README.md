@@ -18,6 +18,7 @@ manager, genConfig, makeClient, makeReplica.
 
 ### Manager (used for managing replica processes and organizing robot clients)
 Manager is a c++ program which manages a whole service session.
+
 | command(alias) | usage |
 | --- | --- |
 | help(help) | print help |
