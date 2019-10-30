@@ -110,17 +110,20 @@ private:
         } else {
             int k = 0;
             for(auto& entry : acceptLog.slots) {
-                if (entry.second == false) {
-                    // if it is a hole
-                    // fill it with no-op
-                    entry.first.make_hole();
-                    entry.second = true;
-                    phone.write_acceptLog(entry.first);
+                if (! learner.filledQ(k)) {
+                    // only enforce unlearned slots
+                    if (entry.second == false) {
+                        // if it is a hole
+                        // fill it with no-op
+                        entry.first.make_hole();
+                        entry.second = true;
+                        phone.write_acceptLog(entry.first);
+                    }
+                    phone.phone_call(ACCEPT_IT);
+                    phone.write_request(entry.first);
+                    phone.broadcast();
                 }
                 r.position = k;
-                phone.phone_call(ACCEPT_IT);
-                phone.write_request(entry.first);
-                phone.broadcast();
                 if(entry.first.contentPositionMatch(r)) {
                     return;
                 } 

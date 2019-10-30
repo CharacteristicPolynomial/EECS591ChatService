@@ -122,6 +122,12 @@ public:
     void init(Phone* p) {
         phone = p;
     }
+    bool filledQ(int k) {
+        // return true if slot k is learned
+        if ((int) learnLog.slots.size() <= k) 
+            return false;
+        return learnLog.slots[k].second;
+    }
     bool response(Request r) {
         // return false if it is not executable
         // return true if it is executable
@@ -194,13 +200,7 @@ public:
         if(viewchange_view > hisview) {
             return completeList.size();
         }
-        if(hisview > viewchange_view) {
-            // error detection: it is impossible to receive promise from a higher view
-            // NO, IT IS VERY POSSIBLE
-            cerr << "Error: leader receives higher view promise" << endl;
-            exit(-1);
-        }
-        // proceed only when tempview == view
+        // proceed only when tempview >= view
         int replicaID = phone->read_int();
         int totalLogLen = phone->read_int();
         if(totalLogLen == 0) {
