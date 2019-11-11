@@ -1,7 +1,7 @@
 #include "phone.h"
 
 void Phone::init(int myid) {
-    cout << "initilizing phone" << endl;
+    // cout << "initilizing phone" << endl;
     id = myid;
     
     // initialize according to the config file
@@ -218,6 +218,20 @@ void Phone::broadcast() {
             (struct sockaddr*) &replicaAddrs[target], sizeof(struct sockaddr_in)) < 0) {
             cout << "sendto failed: " << strerror(errno) << endl;
             exit(-1);
+        }
+    }
+}
+void Phone::broadcastExcept(unordered_set<int> exceptList) {
+    msglog.log_broadcast(); // log it
+    if (loss()) 
+        return;
+    for(int target=0; target<n; target++) {
+        if(exceptList.find(target) == exceptList.end()) {
+            if (sendto(fd, sendBuffer,sendLen, 0, 
+                (struct sockaddr*) &replicaAddrs[target], sizeof(struct sockaddr_in)) < 0) {
+                cout << "sendto failed: " << strerror(errno) << endl;
+                exit(-1);
+            }
         }
     }
 }

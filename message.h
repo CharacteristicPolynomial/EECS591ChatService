@@ -34,7 +34,7 @@ enum HEADER {
 
 class Request {
 public:
-    void make_hole() {
+    void make_hole(int v, int pos) {
         if (text != NULL ) {
             cerr << "making non-empty request a hole" << endl;
             exit(-1);
@@ -42,6 +42,9 @@ public:
         char* temp = new char[20];
         strcpy(temp, "NOOP");
         text = temp;
+        position = pos;
+        textLen = strlen(temp);
+        view = v;
     }
 
     void freeText() {
