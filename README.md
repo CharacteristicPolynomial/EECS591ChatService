@@ -1,6 +1,6 @@
 # EECS591ChatService
 ## Introduction
-Course implementation project- a crash-tolernt chat service which are always safe. It should be live as long as from some certain point there are f+1 correct replicas and messages are delivered synchronously.
+Course implementation project- a crash-tolerant chat service which are always safe. It should be live as long as from some certain point there are f+1 correct replicas and messages are delivered synchronously.
 
 ## Usage
 ### Executables
